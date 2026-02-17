@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="static/css/style.css">
     <!-- Font Awesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
@@ -86,6 +88,20 @@
                 </div>
             </div>
         </main>
+
+        <!-- History Chart Module -->
+        <div class="card history-card" style="margin-top: 2rem;">
+            <div class="card-header">
+                <h3>Historical Data</h3>
+                <div class="chart-controls">
+                    <button class="minimal-btn sm active" onclick="updateChart('day')">Day</button>
+                    <button class="minimal-btn sm" onclick="updateChart('week')">Week</button>
+                </div>
+            </div>
+            <div class="card-content">
+                <canvas id="historyChart"></canvas>
+            </div>
+        </div>
 
         <footer class="app-footer">
             <span id="console-msg">System initialized.</span>

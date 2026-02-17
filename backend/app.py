@@ -2,9 +2,25 @@ from flask import Flask, render_template, request, jsonify
 from flask_socketio import SocketIO, emit
 import threading
 
+import sqlite3
+from datetime import datetime, timedelta
+
 app = Flask(__name__, template_folder='../frontend', static_folder='../frontend/static')
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app, cors_allowed_origins="*")
+
+# Database Setup
+def init_db():
+    conn = sqlite3.connect('sensor_data.db')
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS readings
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                  moisture INTEGER, 
+                  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
+    conn.commit()
+    conn.close()
+
+init_db()
 
 # Global State
 system_state = {
@@ -36,6 +52,16 @@ def receive_data():
             else:
                 system_state['motor_status'] = False
         
+        # Save to DB
+        try:
+            conn = sqlite3.connect('sensor_data.db')
+            c = conn.cursor()
+            c.execute("INSERT INTO readings (moisture) VALUES (?)", (system_state['moisture'],))
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            print(f"DB Error: {e}")
+
         # Broadcast update to Frontend
         socketio.emit('state_update', system_state)
         
@@ -45,6 +71,32 @@ def receive_data():
         })
     
     return jsonify({"status": "error", "message": "No moisture data provided"}), 400
+
+# --- History API ---
+@app.route('/api/history', methods=['GET'])
+def get_history():
+    period = request.args.get('period', 'week')
+    conn = sqlite3.connect('sensor_data.db')
+    c = conn.cursor()
+    
+    if period == 'day':
+        # Last 24 hours
+        cutoff = datetime.now() - timedelta(days=1)
+    elif period == 'week':
+        # Last 7 days
+        cutoff = datetime.now() - timedelta(weeks=1)
+    elif period == 'month':
+        # Last 30 days
+        cutoff = datetime.now() - timedelta(days=30)
+    else:
+        cutoff = datetime.now() - timedelta(weeks=1)
+
+    c.execute("SELECT moisture, timestamp FROM readings WHERE timestamp > ? ORDER BY timestamp ASC", (cutoff,))
+    rows = c.fetchall()
+    conn.close()
+    
+    data = [{"moisture": r[0], "timestamp": r[1]} for r in rows]
+    return jsonify(data)
 
 # --- WebSockets for Frontend ---
 @socketio.on('connect')

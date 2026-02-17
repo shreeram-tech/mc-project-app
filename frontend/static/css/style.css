@@ -3,10 +3,10 @@
     --card-bg: #ffffff;
     --text-primary: #1e293b;
     --text-secondary: #64748b;
-    --primary-color: #3b82f6;
-    /* Soft Blue */
-    --accent-color: #10b981;
-    /* Green */
+    --primary-color: #16a34a;
+    /* vibrant green */
+    --accent-color: #15803d;
+    /* dark green */
     --danger-color: #ef4444;
     /* Red */
     --border-color: #e2e8f0;
@@ -24,7 +24,7 @@
 }
 
 body {
-    background: linear-gradient(120deg, #e0f2fe 0%, #dcfce7 100%);
+    background: linear-gradient(120deg, #ecfccb 0%, #dcfce7 100%);
     color: var(--text-primary);
     font-family: var(--font-family);
     min-height: 100vh;
@@ -388,6 +388,18 @@ body {
     gap: 0.5rem;
     position: relative;
     overflow: hidden;
+}
+
+.minimal-btn.sm {
+    width: auto;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.8rem;
+    box-shadow: none;
+}
+
+.chart-controls {
+    display: flex;
+    gap: 0.5rem;
 }
 
 .minimal-btn:hover {
