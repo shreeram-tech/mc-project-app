@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bio-Habitat Control</title>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="static/css/style.css">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <div class="logo-area">
+                <i class="fa-solid fa-droplet"></i>
+                <span class="brand-text">Smart Irrigation IoT</span>
+            </div>
+            <div class="system-status">
+                <span class="status-indicator online">Online</span>
+            </div>
+        </header>
+
+        <main class="dashboard-grid">
+            <!-- Moisture Module -->
+            <div class="card moisture-card">
+                <div class="card-header">
+                    <h3>Soil Moisture</h3>
+                </div>
+                <div class="card-content">
+                    <div class="gauge-container">
+                        <svg class="progress-ring" width="180" height="180">
+                            <circle class="progress-ring__circle-bg" stroke="#f0f0f0" stroke-width="8"
+                                fill="transparent" r="80" cx="90" cy="90" />
+                            <circle class="progress-ring__circle" stroke="#3b82f6" stroke-width="8" fill="transparent"
+                                r="80" cx="90" cy="90" />
+                        </svg>
+                        <div class="gauge-value">
+                            <span id="moisture-value">0</span><span class="unit">%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Control Module -->
+            <div class="card control-card">
+                <div class="card-header">
+                    <h3>Irrigation Control</h3>
+                </div>
+                <div class="card-content">
+                    <!-- Motor Status -->
+                    <div class="status-row">
+                        <span class="label">Pump Status</span>
+                        <div id="motor-indicator" class="indicator off">Standby</div>
+                    </div>
+
+                    <!-- Mode Toggle -->
+                    <div class="control-group">
+                        <label class="control-label">Mode</label>
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="mode-toggle" checked>
+                            <label for="mode-toggle" class="switch-ui">
+                                <span class="mode-text manual">Manual</span>
+                                <span class="mode-text auto">Auto</span>
+                                <span class="toggle-thumb"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Threshold Slider (Auto Mode) -->
+                    <div class="control-group" id="threshold-group">
+                        <label class="control-label">Dry Threshold: <span id="threshold-val"
+                                class="highlight-text">30%</span></label>
+                        <input type="range" id="threshold-slider" min="0" max="100" value="30" class="minimal-range">
+                    </div>
+
+                    <!-- Manual Button (Manual Mode) -->
+                    <div class="control-group" id="manual-group" style="display: none;">
+                        <button id="manual-pump-btn" class="minimal-btn">
+                            Activate Pump
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="app-footer">
+            <span id="console-msg">System initialized.</span>
+        </footer>
+    </div>
+
+    <!-- SocketIO Client -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="static/js/script.js"></script>
+</body>
+
+</html>
