@@ -13,29 +13,32 @@ const thresholdGroup = document.getElementById('threshold-group');
 const manualPumpBtn = document.getElementById('manual-pump-btn');
 const consoleMsg = document.getElementById('console-msg');
 
-// Gauge Setup
-const radius = progressRing.r.baseVal.value;
-const circumference = radius * 2 * Math.PI;
-progressRing.style.strokeDasharray = `${circumference} ${circumference}`;
-progressRing.style.strokeDashoffset = circumference;
+// Gauge Setup (guard against missing DOM element)
+let radius = 80, circumference = 80 * 2 * Math.PI;
+if (progressRing && progressRing.r && progressRing.r.baseVal) {
+    radius = progressRing.r.baseVal.value;
+    circumference = radius * 2 * Math.PI;
+    progressRing.style.strokeDasharray = `${circumference} ${circumference}`;
+    progressRing.style.strokeDashoffset = circumference;
+}
 
 function setProgress(percent) {
-    const offset = circumference - (percent / 100) * circumference;
-    progressRing.style.strokeDashoffset = offset;
-
-    // Color change based on dryness
-    if (percent < 30) {
-        progressRing.style.stroke = '#ef4444'; // Red (Too Dry)
-    } else if (percent > 70) {
-        progressRing.style.stroke = '#10b981'; // Green (Good)
-    } else {
-        progressRing.style.stroke = '#16a34a'; // Green (Normal)
+    const pct = Math.min(100, Math.max(0, Number(percent) || 0));
+    if (progressRing) {
+        const offset = circumference - (pct / 100) * circumference;
+        progressRing.style.strokeDashoffset = offset;
+        if (pct < 30) {
+            progressRing.style.stroke = '#ef4444'; // Red (Too Dry)
+        } else if (pct > 70) {
+            progressRing.style.stroke = '#10b981'; // Green (Good)
+        } else {
+            progressRing.style.stroke = '#16a34a'; // Green (Normal)
+        }
     }
 }
 
 function logMsg(msg) {
-    // Simple status update for minimal theme
-    consoleMsg.innerText = msg;
+    if (consoleMsg) consoleMsg.innerText = msg;
 }
 
 // --- Socket Events ---
@@ -57,69 +60,64 @@ socket.on('disconnect', () => {
 });
 
 socket.on('state_update', (data) => {
-    // Update Moisture
-    moistureValue.innerText = data.moisture;
-    setProgress(data.moisture);
+    if (!data) return;
+    const moisture = Math.min(100, Math.max(0, Number(data.moisture) || 0));
+    if (moistureValue) moistureValue.innerText = moisture;
+    setProgress(moisture);
 
-    // Update Motor Status
-    if (data.motor_status) {
-        motorIndicator.innerText = "Active";
-        motorIndicator.classList.remove('off');
-        motorIndicator.classList.add('on');
-    } else {
-        motorIndicator.innerText = "Standby";
-        motorIndicator.classList.remove('on');
-        motorIndicator.classList.add('off');
+    if (motorIndicator) {
+        if (data.motor_status) {
+            motorIndicator.innerText = "Active";
+            motorIndicator.classList.remove('off');
+            motorIndicator.classList.add('on');
+        } else {
+            motorIndicator.innerText = "Standby";
+            motorIndicator.classList.remove('on');
+            motorIndicator.classList.add('off');
+        }
     }
 
-    // Update Mode UI
     const isAuto = data.mode === 'auto';
-    modeToggle.checked = isAuto;
+    if (modeToggle) modeToggle.checked = isAuto;
 
-    if (isAuto) {
-        manualGroup.style.display = 'none';
-        thresholdGroup.style.display = 'block';
-    } else {
-        manualGroup.style.display = 'block';
-        thresholdGroup.style.display = 'none';
+    if (manualGroup && thresholdGroup) {
+        if (isAuto) {
+            manualGroup.style.display = 'none';
+            thresholdGroup.style.display = 'block';
+        } else {
+            manualGroup.style.display = 'block';
+            thresholdGroup.style.display = 'none';
+        }
     }
 
-    // Update Threshold Display
-    thresholdSlider.value = data.threshold;
-    thresholdValDisplay.innerText = `${data.threshold}%`;
+    const threshold = Math.min(100, Math.max(0, Number(data.threshold) || 30));
+    if (thresholdSlider) thresholdSlider.value = threshold;
+    if (thresholdValDisplay) thresholdValDisplay.innerText = `${threshold}%`;
 });
 
 // --- UI Interactions ---
 
-modeToggle.addEventListener('change', () => {
+modeToggle?.addEventListener('change', () => {
     const newMode = modeToggle.checked ? 'auto' : 'manual';
     logMsg(`Mode switched to ${newMode}`);
     socket.emit('set_mode', { mode: newMode });
 });
 
-thresholdSlider.addEventListener('input', (e) => {
-    thresholdValDisplay.innerText = `${e.target.value}%`;
+thresholdSlider?.addEventListener('input', (e) => {
+    if (thresholdValDisplay) thresholdValDisplay.innerText = `${e.target.value}%`;
 });
 
-thresholdSlider.addEventListener('change', (e) => {
+thresholdSlider?.addEventListener('change', (e) => {
     logMsg(`Threshold set to ${e.target.value}%`);
     socket.emit('set_threshold', { threshold: e.target.value });
 });
 
-manualPumpBtn.addEventListener('mousedown', () => {
-    logMsg("Pump Activated manually");
-    socket.emit('manual_control', { motor_status: true });
-});
-
-manualPumpBtn.addEventListener('mouseup', () => {
-    logMsg("Pump Deactivated");
-    socket.emit('manual_control', { motor_status: false });
-});
-
-manualPumpBtn.addEventListener('mouseleave', () => {
-    if (motorIndicator.classList.contains('on') && !modeToggle.checked) {
-        socket.emit('manual_control', { motor_status: false });
-    }
+manualPumpBtn?.addEventListener('click', () => {
+    if (!motorIndicator || (modeToggle && modeToggle.checked)) return; // only in manual mode
+    const currentlyOn = motorIndicator.classList.contains('on');
+    const newStatus = !currentlyOn;
+    logMsg(newStatus ? "Pump activated manually" : "Pump deactivated");
+    socket.emit('manual_control', { motor_status: newStatus });
 });
 
 // --- Chart Logic ---
@@ -141,6 +139,7 @@ async function updateChart(period) {
 
     try {
         const response = await fetch(`/api/history?period=${period}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const rawData = await response.json();
 
         // Prepare chart data
@@ -157,8 +156,9 @@ async function updateChart(period) {
             historyChart.destroy();
         }
 
-        // Create new chart
-        const ctx = document.getElementById('historyChart').getContext('2d');
+        const chartEl = document.getElementById('historyChart');
+        if (!chartEl) return;
+        const ctx = chartEl.getContext('2d');
         historyChart = new Chart(ctx, {
             type: 'line',
             data: {
